@@ -1,0 +1,22 @@
+[package]
+name = "kanafix"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Fixes doubled Japanese input from iPad/iPhone over Windows RDP by re-pacing the synthetic VK_PACKET/Backspace stream for configured apps."
+
+[dependencies]
+anyhow = "1"
+serde = { workspace = true }
+toml = "0.8"
+
+[dependencies.windows]
+workspace = true
+features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+]
