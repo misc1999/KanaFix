@@ -9,7 +9,7 @@ description = "Fixes doubled Japanese input from iPad/iPhone over Windows RDP by
 [dependencies]
 anyhow = "1"
 serde = { workspace = true }
-toml = "0.8"
+toml = "1.1"
 
 [dependencies.windows]
 workspace = true
