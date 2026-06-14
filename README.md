@@ -1,4 +1,4 @@
-# KanaBridge — kanafix
+# kanafix
 
 iPad / iPhone の **Windows App（RDP）** から Windows へ日本語を入力すると、
 一部アプリ（Windows 11 の新しいメモ帳など）で文字が二重になる問題を補正する、
