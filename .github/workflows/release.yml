@@ -1,0 +1,76 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    name: build and release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: build
+        run: cargo build --release --locked --package kanafix
+
+      - name: stage binary
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item target/release/kanafix.exe dist/kanafix.exe -Force
+
+      - name: upload unsigned artifact
+        id: unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: kanafix-unsigned
+          path: dist/kanafix.exe
+          if-no-files-found: error
+
+      # Code signing via SignPath. Activates automatically once the repository
+      # variable SIGNPATH_ORGANIZATION_ID and secret SIGNPATH_API_TOKEN exist.
+      # Until then, the release is published unsigned with a SHA-256 checksum.
+      - name: sign with SignPath
+        id: signpath
+        if: vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          connector-url: https://githubactions.connectors.signpath.io
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: kanafix
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: assemble release files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          if (Test-Path signed/kanafix.exe) {
+            Copy-Item signed/kanafix.exe out/kanafix.exe -Force
+            Write-Host "Using SignPath-signed binary."
+          } else {
+            Copy-Item dist/kanafix.exe out/kanafix.exe -Force
+            Write-Host "::warning::SignPath not configured; publishing UNSIGNED binary."
+          }
+          $hash = (Get-FileHash out/kanafix.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  kanafix.exe" | Out-File -Encoding ascii out/SHA256SUMS.txt
+          Write-Host "SHA256: $hash"
+
+      - name: publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/kanafix.exe
+            out/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          generate_release_notes: true
